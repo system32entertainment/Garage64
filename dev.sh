@@ -17,6 +17,10 @@ BACKEND_PID=$!
 
 echo "Starting frontend..."
 cd "$ROOT/frontend"
+if [ ! -d node_modules ]; then
+  echo "Installing npm dependencies..."
+  npm install
+fi
 npm run dev &
 FRONTEND_PID=$!
 
