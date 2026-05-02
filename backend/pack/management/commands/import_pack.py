@@ -15,7 +15,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from pack.models import EntityBody, ModelPart, CarVariant, VariantPart
+from pack.models import CarVariant, EntityBody, ModelPart, VariantPart
 
 
 class Command(BaseCommand):
@@ -50,13 +50,13 @@ class Command(BaseCommand):
         # trigger_map = {2: 'Duce', 3: 'DuceH'} (model index → name)
 
         # Default variant (oak_boat itself, no trigger)
-        default_variant = CarVariant.objects.create(
+        CarVariant.objects.create(
             file_name='oak_boat',
             trigger_name='',
             body=body,
             order=0,
         )
-        self.stdout.write(self.style.SUCCESS(f'Created CarVariant: oak_boat (default)'))
+        self.stdout.write(self.style.SUCCESS('Created CarVariant: oak_boat (default)'))
 
         # Indexed variants: oak_boat2, oak_boat3, ...
         parts_cache: dict[str, ModelPart] = {}

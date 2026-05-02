@@ -11,7 +11,7 @@ from pathlib import Path
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from pack.models import EntityBody, ModelPart, CarVariant, VariantPart
+from pack.models import CarVariant, EntityBody, ModelPart, VariantPart
 
 
 class Command(BaseCommand):

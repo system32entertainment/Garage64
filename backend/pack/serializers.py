@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import EntityBody, ModelPart, CarVariant, VariantPart, PartSlot
+
+from .models import CarVariant, EntityBody, ModelPart, PartSlot, VariantPart
 
 
 class PartSlotSerializer(serializers.ModelSerializer):

@@ -1,6 +1,15 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from .views import EntityBodyViewSet, ModelPartViewSet, CarVariantViewSet, PartSlotViewSet, pack_asset, music_list, music_stream
+
+from .views import (
+    CarVariantViewSet,
+    EntityBodyViewSet,
+    ModelPartViewSet,
+    PartSlotViewSet,
+    music_list,
+    music_stream,
+    pack_asset,
+)
 
 router = DefaultRouter()
 router.register('bodies', EntityBodyViewSet, basename='body')

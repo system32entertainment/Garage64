@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import EntityBody, ModelPart, CarVariant, VariantPart, PartSlot
+
+from .models import CarVariant, EntityBody, ModelPart, PartSlot, VariantPart
 
 
 @admin.register(PartSlot)
