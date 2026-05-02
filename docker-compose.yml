@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    volumes:
+      - db_data:/app/db
+      - ./Garage64_LATEST:/pack
+    environment:
+      - PACK_ROOT=/pack
+      - DB_PATH=/app/db/db.sqlite3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3264:3264"
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
