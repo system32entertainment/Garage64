@@ -112,16 +112,6 @@ Unique together: `(variant, part)`
 | GET | `/api/asset/?path=<rel>` | Serve file from `{PACK_ROOT}/assets/minecraft/<rel>` |
 | PUT | `/api/asset/?path=<rel>` | Overwrite file with raw request body (creates dirs as needed) |
 
-### Music — `/api/music/`
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/music/?dir=<path>` | List audio files in directory (falls back to `~/Music`) |
-| GET | `/api/music/stream/?path=<abs>` | Stream an audio file (must be within `~`) |
-
-Supported audio formats: `.mp3`, `.flac`, `.ogg`, `.wav`, `.m4a`, `.aac`, `.opus`
-
----
-
 ## Write Serializer (CarVariant)
 
 Create/update variants accept a `part_ids` list which atomically replaces all `VariantPart` entries:

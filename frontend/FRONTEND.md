@@ -141,10 +141,7 @@ Draggable floating toolbar for the TextureEditor. Tools: Pencil / Fill / Eyedrop
 Canvas component that renders a texture with colored face overlays. Faces are clickable and draggable to edit UV coordinates.
 
 ### `NavBar`
-Top navigation bar. Contains brand name, nav links (Home / Garage), embedded `MusicPlayer`, and theme toggle.
-
-### `MusicPlayer`
-Embedded music player in the NavBar. Streams audio from `/api/music/stream/`. Supports play/pause, next/prev, seek, volume, directory selection. Persists settings to `localStorage`.
+Top navigation bar. Contains brand name, nav links (Home / Garage), and theme toggle.
 
 ---
 
@@ -321,7 +318,6 @@ src/
 │
 ├── components/                 <-- GLOBAL: Dumb, reusable UI
 │   ├── CemViewer.jsx
-│   ├── MusicPlayer.jsx
 │   └── NavBar.jsx
 │
 ├── features/                   <-- DOMAINS: Heavy logic & local state
@@ -352,4 +348,3 @@ src/
     ├── Builder.jsx
     ├── Gallery.jsx
     └── PartsLibrary.
-

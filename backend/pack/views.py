@@ -1,14 +1,8 @@
-import json
-import mimetypes
-from pathlib import Path
-
-from django.conf import settings
-from django.http import FileResponse, Http404
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import CarVariant, EntityBody, ModelPart, PartSlot, VariantPart
+from .models import CarVariant, EntityBody, ModelPart, PartSlot
 from .serializers import (
     CarVariantSerializer,
     CarVariantWriteSerializer,
@@ -16,6 +10,7 @@ from .serializers import (
     ModelPartSerializer,
     PartSlotSerializer,
 )
+from .services import exporter
 
 
 class PartSlotViewSet(viewsets.ModelViewSet):
@@ -45,28 +40,7 @@ class CarVariantViewSet(viewsets.ModelViewSet):
     def compiled_jem(self, request, pk=None):
         """Return the fully compiled JEM JSON for this variant (body + injected parts)."""
         variant = self.get_object()
-        jem = json.loads(json.dumps(variant.body.body_data))
-        if variant.texture_override:
-            jem['texture'] = variant.texture_override
-
-        attachments = []
-        for vp in VariantPart.objects.filter(variant=variant).order_by('order'):
-            # Build an inlined entry: attachment wrapper + JPM geometry as submodels.
-            # The viewer renders submodels directly; "model" refs to .jpm files are skipped.
-            entry = dict(vp.part.attachment_meta)
-            entry['model'] = vp.part.jpm_path
-            _normalize_car_space_attachment(entry)
-            entry.pop('model', None)
-            jpm = json.loads(json.dumps(vp.part.part_data))
-            _normalize_known_part_data(vp.part.jpm_path, jpm)
-            # Wrap the JPM root as a submodel of the attachment entry
-            entry['submodels'] = [jpm]
-            attachments.append(entry)
-
-        if attachments:
-            jem['models'] = [jem['models'][0]] + attachments + jem['models'][1:]
-
-        return Response(jem)
+        return Response(exporter.compiled_jem(variant))
 
     @action(detail=False, methods=['post'])
     def export(self, request):
@@ -74,200 +48,9 @@ class CarVariantViewSet(viewsets.ModelViewSet):
         Regenerate all .jem files and .properties files in the pack
         from the current database state.
         """
-        pack_root = Path(settings.PACK_ROOT)
-        cem_dir = pack_root / 'assets' / 'minecraft' / 'optifine' / 'cem'
-        errors = []
-
-        variants = CarVariant.objects.all().order_by('order')
-
-        # Group variants by entity body to generate one .properties file per body
-        bodies_seen: dict[int, list[CarVariant]] = {}
-        for variant in variants:
-            bodies_seen.setdefault(variant.body_id, []).append(variant)
-
-        for body_id, body_variants in bodies_seen.items():
-            body = EntityBody.objects.get(pk=body_id)
-
-            for variant in body_variants:
-                try:
-                    _write_jem(cem_dir, variant)
-                except Exception as e:
-                    errors.append(f'{variant.file_name}.jem: {e}')
-
-            try:
-                _write_properties(cem_dir, body, body_variants)
-            except Exception as e:
-                errors.append(f'{body.jem_file_name}.properties: {e}')
-
-        # Write each .jpm file
-        for part in ModelPart.objects.all():
-            try:
-                _write_jpm(cem_dir, part)
-            except Exception as e:
-                errors.append(f'{part.name}.jpm: {e}')
-
-        if errors:
-            return Response({'status': 'partial', 'errors': errors},
+        result = exporter.export_all()
+        if result.errors:
+            return Response({'status': 'partial', 'errors': result.errors},
                             status=status.HTTP_207_MULTI_STATUS)
-        return Response({'status': 'ok'})
+        return Response({'status': 'ok', 'written': len(result.written)})
 
-
-# ── helpers ──────────────────────────────────────────────────────────────────
-
-def _write_jem(cem_dir: Path, variant: CarVariant):
-    """Build and write a .jem file for a CarVariant."""
-    jem = json.loads(json.dumps(variant.body.body_data))  # deep copy
-    if variant.texture_override:
-        jem['texture'] = variant.texture_override
-
-    # Collect attachment entries for each part in order
-    attachments = []
-    for vp in VariantPart.objects.filter(variant=variant).order_by('order'):
-        entry = dict(vp.part.attachment_meta)
-        entry['model'] = vp.part.jpm_path
-        _normalize_car_space_attachment(entry)
-        attachments.append(entry)
-
-    if attachments:
-        # Insert after index 0 (the "front" body entry)
-        jem['models'] = [jem['models'][0]] + attachments + jem['models'][1:]
-
-    out_path = cem_dir / f'{variant.file_name}.jem'
-    out_path.write_text(json.dumps(jem, indent='\t'), encoding='utf-8')
-    for alias in _cem_aliases(variant.file_name):
-        (cem_dir / f'{alias}.jem').write_text(json.dumps(jem, indent='\t'), encoding='utf-8')
-
-
-def _write_jpm(cem_dir: Path, part: ModelPart):
-    """Write the .jpm file for a ModelPart."""
-    # Derive sub-path from jpm_path:
-    # "minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm"
-    # → miata/parts/miata_duce_wheels.jpm
-    rel = part.jpm_path.split('optifine/cem/', 1)[-1]
-    out_path = cem_dir / rel
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    part_data = json.loads(json.dumps(part.part_data))
-    _normalize_known_part_data(part.jpm_path, part_data)
-    out_path.write_text(json.dumps(part_data, indent='\t'), encoding='utf-8')
-
-
-def _write_properties(cem_dir: Path, body: EntityBody, variants: list):
-    """
-    Regenerate the .properties file for an entity body.
-    Only triggered variants (trigger_name != '') get entries.
-    """
-    triggered = [v for v in variants if v.trigger_name]
-    if not triggered:
-        return
-
-    lines = ['# Auto-generated by Garage64 editor\n']
-    for v in sorted(triggered, key=lambda v: v.order):
-        lines.append(f'models.{v.order}={v.order + 1}\n')
-        lines.append(f'name.{v.order}={v.trigger_name}\n')
-
-    props_path = cem_dir / f'{body.jem_file_name}.properties'
-    props_path.write_text(''.join(lines), encoding='utf-8')
-    for alias in _cem_aliases(body.jem_file_name):
-        (cem_dir / f'{alias}.properties').write_text(''.join(lines), encoding='utf-8')
-
-
-def _cem_aliases(file_name: str) -> list[str]:
-    """Keep legacy oak_boat names mirrored to active OptiFine boat names."""
-    if file_name == 'oak_boat':
-        return ['boat']
-    if file_name.startswith('oak_boat') and file_name[len('oak_boat'):].isdigit():
-        return [f'boat{file_name[len("oak_boat"):]}']
-    return []
-
-
-def _normalize_car_space_attachment(entry: dict):
-    """Known Miata JPM parts are authored in car space; avoid double front transforms."""
-    model = entry.get('model', '')
-    if model in {
-        'minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm',
-        'minecraft:optifine/cem/miata/parts/miata_popups.jpm',
-    }:
-        entry['part'] = 'front'
-        entry['attach'] = True
-        entry['translate'] = [0, -2, -5.5]
-        entry['rotate'] = [0, -180, 0]
-        entry['mirrorTexture'] = 'u'
-
-
-def _normalize_known_part_data(jpm_path: str, part_data: dict):
-    """Keep known Garage64 JPM roots at their confirmed in-game placement."""
-    if jpm_path != 'minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm':
-        return
-    for model in part_data.get('submodels', []):
-        if model.get('id') == 'DuceKitWheels':
-            model['translate'] = [0, 0, 11]
-
-
-# ── Music file server ─────────────────────────────────────────────────────────
-
-AUDIO_EXTS = {'.mp3', '.flac', '.ogg', '.wav', '.m4a', '.aac', '.opus'}
-MUSIC_ROOT  = Path.home()
-
-@api_view(['GET'])
-def music_list(request):
-    """
-    GET /api/music/?dir=/some/path — list audio files in the given directory.
-    Falls back to ~/Music then ~/ if dir not supplied or invalid.
-    """
-    raw_dir = request.query_params.get('dir', '').strip()
-    if raw_dir:
-        root = Path(raw_dir).expanduser()
-    else:
-        root = Path.home() / 'Music'
-        if not root.is_dir():
-            root = MUSIC_ROOT
-
-    if not root.is_dir():
-        return Response({'error': f'Not a directory: {root}'}, status=400)
-
-    tracks = []
-    for p in sorted(root.rglob('*')):
-        if p.is_file() and p.suffix.lower() in AUDIO_EXTS:
-            tracks.append({'name': p.name, 'path': str(p)})
-    return Response(tracks)
-
-@api_view(['GET'])
-def music_stream(request):
-    """GET /api/music/stream/?path=<absolute-path> — stream an audio file."""
-    raw = request.query_params.get('path', '')
-    p = Path(raw).expanduser()
-    if not p.is_file() or p.suffix.lower() not in AUDIO_EXTS:
-        raise Http404
-    # Must stay inside the user's home directory
-    try:
-        p.relative_to(MUSIC_ROOT)
-    except ValueError:
-        raise Http404 from None
-    mime, _ = mimetypes.guess_type(str(p))
-    return FileResponse(open(p, 'rb'), content_type=mime or 'audio/mpeg')
-
-
-# ── Pack asset file server ────────────────────────────────────────────────────
-
-@api_view(['GET', 'PUT'])
-def pack_asset(request):
-    """
-    GET  /api/asset/?path=textures/entity/boat/oak.png  — serve file
-    PUT  /api/asset/?path=textures/entity/boat/oak.png  — overwrite file (raw body)
-    """
-    rel = request.query_params.get('path', '')
-    if not rel or '..' in rel:
-        raise Http404
-
-    full_path = Path(settings.PACK_ROOT) / 'assets' / 'minecraft' / rel
-
-    if request.method == 'PUT':
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        full_path.write_bytes(request.body)
-        return Response({'status': 'ok'})
-
-    if not full_path.exists() or not full_path.is_file():
-        raise Http404
-
-    mime, _ = mimetypes.guess_type(str(full_path))
-    return FileResponse(open(full_path, 'rb'), content_type=mime or 'application/octet-stream')

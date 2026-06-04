@@ -1,14 +1,12 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from .asset_views import pack_asset
 from .views import (
     CarVariantViewSet,
     EntityBodyViewSet,
     ModelPartViewSet,
     PartSlotViewSet,
-    music_list,
-    music_stream,
-    pack_asset,
 )
 
 router = DefaultRouter()
@@ -19,6 +17,4 @@ router.register('slots', PartSlotViewSet, basename='slot')
 
 urlpatterns = router.urls + [
     path('asset/', pack_asset),
-    path('music/', music_list),
-    path('music/stream/', music_stream),
 ]

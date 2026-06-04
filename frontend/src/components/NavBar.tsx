@@ -1,7 +1,6 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTheme } from '../ThemeContext'
-import MusicPlayer from './MusicPlayer'
 
 const s: Record<string, React.CSSProperties> = {
   nav: {
@@ -83,9 +82,6 @@ export default function NavBar() {
           {label}
         </NavLink>
       ))}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', padding: '0 10px' }}>
-        <MusicPlayer />
-      </div>
       <button style={s.themeBtn} onClick={toggle} title={isDark ? 'Switch to XP theme' : 'Switch to dark mode'}>
         {isDark ? '☀ XP' : '◑ Dark'}
       </button>
