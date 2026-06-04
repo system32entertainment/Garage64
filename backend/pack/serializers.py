@@ -1,6 +1,16 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from .models import CarVariant, EntityBody, ModelPart, PartSlot, VariantPart
+from .schemas.cem import validate_attachment_meta, validate_jem, validate_jpm
+
+
+def _run_json_validator(validator, value):
+    try:
+        validator(value)
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError(str(exc)) from exc
+    return value
 
 
 class PartSlotSerializer(serializers.ModelSerializer):
@@ -13,6 +23,12 @@ class ModelPartSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModelPart
         fields = ['id', 'name', 'jpm_path', 'part_data', 'attachment_meta', 'slot']
+
+    def validate_part_data(self, value):
+        return _run_json_validator(validate_jpm, value)
+
+    def validate_attachment_meta(self, value):
+        return _run_json_validator(validate_attachment_meta, value)
 
 
 class VariantPartSerializer(serializers.ModelSerializer):
@@ -30,6 +46,9 @@ class EntityBodySerializer(serializers.ModelSerializer):
     class Meta:
         model = EntityBody
         fields = ['id', 'name', 'jem_file_name', 'entity_type', 'body_data']
+
+    def validate_body_data(self, value):
+        return _run_json_validator(validate_jem, value)
 
 
 class CarVariantSerializer(serializers.ModelSerializer):

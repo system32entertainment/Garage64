@@ -1,5 +1,7 @@
 from django.db import models
 
+from .schemas.cem import validate_attachment_meta, validate_jem, validate_jpm
+
 
 class PartSlot(models.Model):
     """
@@ -32,6 +34,10 @@ class EntityBody(models.Model):
     def __str__(self):
         return self.name
 
+    def clean(self):
+        super().clean()
+        validate_jem(self.body_data)
+
     class Meta:
         verbose_name_plural = 'entity bodies'
 
@@ -55,6 +61,11 @@ class ModelPart(models.Model):
 
     def __str__(self):
         return self.name
+
+    def clean(self):
+        super().clean()
+        validate_jpm(self.part_data)
+        validate_attachment_meta(self.attachment_meta)
 
 
 class CarVariant(models.Model):
