@@ -33,7 +33,8 @@ EntityBody → CarVariant → VariantPart → ModelPart
 ## Running locally
 
 ```bash
-./dev.sh   # starts Django on :8000 and Vite on :5173
+./setup.sh        # builds Docker images, migrates the DB, and imports Garage64_LATEST
+docker compose up # starts the site on http://localhost:3264/garage64/
 ```
 
 Backend setup:

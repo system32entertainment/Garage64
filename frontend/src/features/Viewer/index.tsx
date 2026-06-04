@@ -20,7 +20,10 @@ export default function Viewer() {
 
   useEffect(() => {
     api.getVariants().then(vs => {
-      const target = vs.find(v => v.file_name === 'oak_boat3') || vs[0]
+      const preferredNames = ['boat3', 'boat2', 'oak_boat3', 'oak_boat2']
+      const target = preferredNames
+        .map(name => vs.find(v => v.file_name === name))
+        .find(Boolean) || vs[0]
       if (!target) return
       fetch(`${import.meta.env.BASE_URL}api/variants/${target.id}/compiled_jem/`)
         .then(r => r.json())

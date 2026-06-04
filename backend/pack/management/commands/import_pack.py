@@ -2,14 +2,15 @@
 python manage.py import_pack
 
 Reads the existing pack files from PACK_ROOT and seeds the database:
-  - EntityBody  ← oak_boat.jem (the clean base body, no jpm entries)
-  - ModelPart   ← each .jpm file found referenced inside jem variants
-  - CarVariant  ← one per .jem file (default + triggered variants)
+  - EntityBody  ← the configured base .jem file
+  - ModelPart   ← every .jpm part file under optifine/cem
+  - CarVariant  ← the default model plus numbered .jem variants
 
 Run this once after setting up. Re-running is safe — it clears existing data first.
 """
 
 import json
+import os
 from pathlib import Path
 
 from django.conf import settings
@@ -21,9 +22,22 @@ from pack.models import CarVariant, EntityBody, ModelPart, VariantPart
 class Command(BaseCommand):
     help = 'Seed the database from the existing pack files in PACK_ROOT'
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--model-name',
+            default=os.environ.get('CEM_MODEL_NAME', 'boat'),
+            help='Base CEM model name without extension, for example oak_boat or boat.',
+        )
+
     def handle(self, *args, **options):
         pack_root = Path(settings.PACK_ROOT)
         cem_dir = pack_root / 'assets' / 'minecraft' / 'optifine' / 'cem'
+        model_name = options['model_name']
+        base_jem_path = cem_dir / f'{model_name}.jem'
+        props_path = cem_dir / f'{model_name}.properties'
+
+        if not base_jem_path.exists():
+            raise FileNotFoundError(f'Missing base CEM model: {base_jem_path}')
 
         self.stdout.write('Clearing existing data...')
         VariantPart.objects.all().delete()
@@ -31,13 +45,13 @@ class Command(BaseCommand):
         ModelPart.objects.all().delete()
         EntityBody.objects.all().delete()
 
-        # ── 1. Create the base body from oak_boat.jem ─────────────────────
-        base_jem_path = cem_dir / 'oak_boat.jem'
+        # ── 1. Create the base body from the configured .jem ──────────────
         base_data = json.loads(base_jem_path.read_text(encoding='utf-8'))
+        _remove_stale_inline_parts(base_data)
 
         body = EntityBody.objects.create(
             name='miata_base',
-            jem_file_name='oak_boat',
+            jem_file_name=model_name,
             entity_type='boat',
             body_data=base_data,
         )
@@ -45,34 +59,40 @@ class Command(BaseCommand):
 
         # ── 2. Parse variant .jem files ────────────────────────────────────
         # Read .properties to get trigger names keyed by variant index
-        props_path = cem_dir / 'oak_boat.properties'
         trigger_map = _parse_properties(props_path)
         # trigger_map = {2: 'Duce', 3: 'DuceH'} (model index → name)
 
-        # Default variant (oak_boat itself, no trigger)
+        # Default variant (base model itself, no trigger)
         CarVariant.objects.create(
-            file_name='oak_boat',
+            file_name=model_name,
             trigger_name='',
             body=body,
             order=0,
         )
-        self.stdout.write(self.style.SUCCESS('Created CarVariant: oak_boat (default)'))
+        self.stdout.write(self.style.SUCCESS(f'Created CarVariant: {model_name} (default)'))
 
-        # Indexed variants: oak_boat2, oak_boat3, ...
         parts_cache: dict[str, ModelPart] = {}
+
+        # Import every .jpm so the Parts Library sees available parts even
+        # before they are attached to a variant.
+        for jpm_path in sorted(cem_dir.rglob('*.jpm')):
+            _get_or_create_part(_jpm_ref_from_path(jpm_path, cem_dir), {}, cem_dir, parts_cache)
+
+        # Indexed variants: boat2, boat3, ...
         variant_index = 2
         while True:
-            jem_path = cem_dir / f'oak_boat{variant_index}.jem'
+            jem_path = cem_dir / f'{model_name}{variant_index}.jem'
             if not jem_path.exists():
                 break
 
             jem_data = json.loads(jem_path.read_text(encoding='utf-8'))
-            jpm_entries, clean_models = _split_models(jem_data['models'])
+            _remove_stale_inline_parts(jem_data)
+            jpm_entries, _ = _split_models(jem_data['models'])
 
             # The clean base should already match body_data, but we store it as-is
             trigger_name = trigger_map.get(variant_index, '')
             variant = CarVariant.objects.create(
-                file_name=f'oak_boat{variant_index}',
+                file_name=f'{model_name}{variant_index}',
                 trigger_name=trigger_name,
                 body=body,
                 order=variant_index - 1,  # order 1, 2, ...
@@ -85,7 +105,7 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Created CarVariant: oak_boat{variant_index} '
+                    f'Created CarVariant: {model_name}{variant_index} '
                     f'(trigger="{trigger_name}", parts={len(jpm_entries)})'
                 )
             )
@@ -98,7 +118,7 @@ class Command(BaseCommand):
 
 def _parse_properties(path: Path) -> dict:
     """
-    Parse oak_boat.properties into {model_index: trigger_name}.
+    Parse a CEM .properties file into {model_index: trigger_name}.
     Example: models.2=3  name.2=DuceH  →  {3: 'DuceH'}
     """
     if not path.exists():
@@ -137,6 +157,15 @@ def _split_models(models: list) -> tuple[list, list]:
     return jpm_entries, rest
 
 
+def _remove_stale_inline_parts(jem_data: dict):
+    """Drop old top-level inlined part geometry; variants should attach JPM refs."""
+    stale_ids = {'DuceKitWheels', 'miata_popups'}
+    jem_data['models'] = [
+        model for model in jem_data.get('models', [])
+        if not (model.get('id') in stale_ids and 'model' not in model)
+    ]
+
+
 def _get_or_create_part(
     jpm_path_str: str,
     entry: dict,
@@ -144,8 +173,13 @@ def _get_or_create_part(
     cache: dict,
 ) -> ModelPart:
     """Load or create a ModelPart from a jpm path string."""
+    attachment_meta = {k: v for k, v in entry.items() if k != 'model'}
     if jpm_path_str in cache:
-        return cache[jpm_path_str]
+        part = cache[jpm_path_str]
+        if attachment_meta and not part.attachment_meta:
+            part.attachment_meta = attachment_meta
+            part.save(update_fields=['attachment_meta'])
+        return part
 
     # Derive filesystem path from the minecraft: namespace path
     # "minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm"
@@ -155,14 +189,12 @@ def _get_or_create_part(
     part_data = {}
     if full_path.exists():
         part_data = json.loads(full_path.read_text(encoding='utf-8'))
-
-    # attachment_meta = entry minus the "model" key
-    attachment_meta = {k: v for k, v in entry.items() if k != 'model'}
+        _normalize_known_part_data(jpm_path_str, part_data)
 
     # Derive a friendly name from the filename
     name = Path(rel).stem  # e.g. "miata_duce_wheels"
 
-    part, _ = ModelPart.objects.get_or_create(
+    part, created = ModelPart.objects.get_or_create(
         jpm_path=jpm_path_str,
         defaults={
             'name': name,
@@ -170,5 +202,23 @@ def _get_or_create_part(
             'attachment_meta': attachment_meta,
         },
     )
+    if not created and attachment_meta and not part.attachment_meta:
+        part.attachment_meta = attachment_meta
+        part.save(update_fields=['attachment_meta'])
     cache[jpm_path_str] = part
     return part
+
+
+def _jpm_ref_from_path(path: Path, cem_dir: Path) -> str:
+    """Convert a JPM filesystem path into an OptiFine namespace reference."""
+    rel = path.relative_to(cem_dir).as_posix()
+    return f'minecraft:optifine/cem/{rel}'
+
+
+def _normalize_known_part_data(jpm_path_str: str, part_data: dict):
+    """Keep known Garage64 JPMs at their confirmed in-game placement."""
+    if jpm_path_str != 'minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm':
+        return
+    for model in part_data.get('submodels', []):
+        if model.get('id') == 'DuceKitWheels':
+            model['translate'] = [0, 0, 11]

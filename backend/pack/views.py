@@ -53,8 +53,12 @@ class CarVariantViewSet(viewsets.ModelViewSet):
         for vp in VariantPart.objects.filter(variant=variant).order_by('order'):
             # Build an inlined entry: attachment wrapper + JPM geometry as submodels.
             # The viewer renders submodels directly; "model" refs to .jpm files are skipped.
-            entry = {k: v for k, v in vp.part.attachment_meta.items() if k != 'model'}
-            jpm = vp.part.part_data
+            entry = dict(vp.part.attachment_meta)
+            entry['model'] = vp.part.jpm_path
+            _normalize_car_space_attachment(entry)
+            entry.pop('model', None)
+            jpm = json.loads(json.dumps(vp.part.part_data))
+            _normalize_known_part_data(vp.part.jpm_path, jpm)
             # Wrap the JPM root as a submodel of the attachment entry
             entry['submodels'] = [jpm]
             attachments.append(entry)
@@ -121,6 +125,7 @@ def _write_jem(cem_dir: Path, variant: CarVariant):
     for vp in VariantPart.objects.filter(variant=variant).order_by('order'):
         entry = dict(vp.part.attachment_meta)
         entry['model'] = vp.part.jpm_path
+        _normalize_car_space_attachment(entry)
         attachments.append(entry)
 
     if attachments:
@@ -129,6 +134,8 @@ def _write_jem(cem_dir: Path, variant: CarVariant):
 
     out_path = cem_dir / f'{variant.file_name}.jem'
     out_path.write_text(json.dumps(jem, indent='\t'), encoding='utf-8')
+    for alias in _cem_aliases(variant.file_name):
+        (cem_dir / f'{alias}.jem').write_text(json.dumps(jem, indent='\t'), encoding='utf-8')
 
 
 def _write_jpm(cem_dir: Path, part: ModelPart):
@@ -139,7 +146,9 @@ def _write_jpm(cem_dir: Path, part: ModelPart):
     rel = part.jpm_path.split('optifine/cem/', 1)[-1]
     out_path = cem_dir / rel
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(part.part_data, indent='\t'), encoding='utf-8')
+    part_data = json.loads(json.dumps(part.part_data))
+    _normalize_known_part_data(part.jpm_path, part_data)
+    out_path.write_text(json.dumps(part_data, indent='\t'), encoding='utf-8')
 
 
 def _write_properties(cem_dir: Path, body: EntityBody, variants: list):
@@ -158,6 +167,40 @@ def _write_properties(cem_dir: Path, body: EntityBody, variants: list):
 
     props_path = cem_dir / f'{body.jem_file_name}.properties'
     props_path.write_text(''.join(lines), encoding='utf-8')
+    for alias in _cem_aliases(body.jem_file_name):
+        (cem_dir / f'{alias}.properties').write_text(''.join(lines), encoding='utf-8')
+
+
+def _cem_aliases(file_name: str) -> list[str]:
+    """Keep legacy oak_boat names mirrored to active OptiFine boat names."""
+    if file_name == 'oak_boat':
+        return ['boat']
+    if file_name.startswith('oak_boat') and file_name[len('oak_boat'):].isdigit():
+        return [f'boat{file_name[len("oak_boat"):]}']
+    return []
+
+
+def _normalize_car_space_attachment(entry: dict):
+    """Known Miata JPM parts are authored in car space; avoid double front transforms."""
+    model = entry.get('model', '')
+    if model in {
+        'minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm',
+        'minecraft:optifine/cem/miata/parts/miata_popups.jpm',
+    }:
+        entry['part'] = 'front'
+        entry['attach'] = True
+        entry['translate'] = [0, -2, -5.5]
+        entry['rotate'] = [0, -180, 0]
+        entry['mirrorTexture'] = 'u'
+
+
+def _normalize_known_part_data(jpm_path: str, part_data: dict):
+    """Keep known Garage64 JPM roots at their confirmed in-game placement."""
+    if jpm_path != 'minecraft:optifine/cem/miata/parts/miata_duce_wheels.jpm':
+        return
+    for model in part_data.get('submodels', []):
+        if model.get('id') == 'DuceKitWheels':
+            model['translate'] = [0, 0, 11]
 
 
 # ── Music file server ─────────────────────────────────────────────────────────
