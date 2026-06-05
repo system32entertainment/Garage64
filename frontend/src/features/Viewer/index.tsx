@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../../api'
 import CemViewer from '../../components/CemViewer'
+import { useCompiledJemQuery, useVariantsQuery } from '../../queries'
 import { useTheme } from '../../ThemeContext'
 
 const s: Record<string, React.CSSProperties> = {
@@ -16,28 +16,20 @@ const s: Record<string, React.CSSProperties> = {
 export default function Viewer() {
   const navigate = useNavigate()
   const { isDark } = useTheme()
-  const [jem, setJem] = useState(null)
-
-  useEffect(() => {
-    api.getVariants().then(vs => {
-      const preferredNames = ['boat3', 'boat2', 'oak_boat3', 'oak_boat2']
-      const target = preferredNames
-        .map(name => vs.find(v => v.file_name === name))
-        .find(Boolean) || vs[0]
-      if (!target) return
-      fetch(`${import.meta.env.BASE_URL}api/variants/${target.id}/compiled_jem/`)
-        .then(r => r.json())
-        .then(setJem)
-        .catch(() => { })
-    })
-  }, [])
+  const variantsQuery = useVariantsQuery()
+  const variants = variantsQuery.data || []
+  const preferredNames = ['boat3', 'boat2', 'oak_boat3', 'oak_boat2']
+  const target = preferredNames
+    .map(name => variants.find(v => v.file_name === name))
+    .find(Boolean) || variants[0]
+  const jemQuery = useCompiledJemQuery(target?.id)
 
   const bg = isDark ? '#1e1e1e' : '#ece9d8'
 
   return (
     <div style={s.page}>
       <div style={s.canvas}>
-        <CemViewer jem={jem} onError={() => { }} autoRotate showGrid={false} showAxes={false} enableZoom={false} bgColor={bg} />
+        <CemViewer jem={jemQuery.data || null} onError={() => { }} autoRotate showGrid={false} showAxes={false} enableZoom={false} bgColor={bg} />
         <div style={s.overlay}>
           <span style={s.title}>Garage64</span>
           <button style={s.btn} onClick={() => navigate('/gallery')}>Open Garage →</button>

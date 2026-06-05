@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { api } from '../../api'
+import { useExportPackMutation } from '../../queries'
 
 const s = {
   heading: { fontSize: '13px', marginBottom: '4px', color: 'var(--clr-accent)', fontWeight: 'bold', fontFamily: 'Monocraft, sans-serif' },
@@ -16,12 +16,13 @@ const s = {
 export default function Export() {
   const [status, setStatus] = useState(null)  // null | 'loading' | 'ok' | 'error' | 'partial'
   const [errors, setErrors] = useState([])
+  const exportPack = useExportPackMutation()
 
   async function run() {
     setStatus('loading')
     setErrors([])
     try {
-      const res = await api.exportPack()
+      const res = await exportPack.mutateAsync()
       if (res.errors?.length) {
         setStatus('partial')
         setErrors(res.errors)
@@ -51,9 +52,9 @@ export default function Export() {
         <button
           style={{ ...s.btn, ...(status === 'loading' ? s.btnDisabled : {}) }}
           onClick={run}
-          disabled={status === 'loading'}
+          disabled={status === 'loading' || exportPack.isPending}
         >
-          {status === 'loading' ? 'Exporting...' : 'Export to Pack'}
+          {status === 'loading' || exportPack.isPending ? 'Exporting...' : 'Export to Pack'}
         </button>
 
         {status === 'ok' && (

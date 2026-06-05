@@ -546,18 +546,18 @@ const ModelerBase = forwardRef<any, any>(function Modeler({
     if (sel.kind === 'model' && tcModeRef.current === 'pivot') {
       // Move pivot only — shift translate, inversely offset boxes and submodels so geometry stays put
       const oldT = model.translate || [0, 0, 0]
-      const newT = [Math.round(obj.position.x * sx), Math.round(obj.position.y * sy), Math.round(obj.position.z * sz)]
+      const newT: [number, number, number] = [Math.round(obj.position.x * sx), Math.round(obj.position.y * sy), Math.round(obj.position.z * sz)]
       const d = [newT[0] - oldT[0], newT[1] - oldT[1], newT[2] - oldT[2]]
       newModels = updateNode(data.models, sel.modelPath, n => ({
         ...n,
         translate: newT,
         boxes: (n.boxes || []).map(box => {
-          const [bx = 0, by = 0, bz = 0, ...rest] = box.coordinates || []
-          return { ...box, coordinates: [Math.round(bx - d[0]), Math.round(by - d[1]), Math.round(bz - d[2]), ...rest] }
+          const [bx = 0, by = 0, bz = 0, bw = 0, bh = 0, bd = 0] = box.coordinates || []
+          return { ...box, coordinates: [Math.round(bx - d[0]), Math.round(by - d[1]), Math.round(bz - d[2]), bw, bh, bd] }
         }),
         submodels: (n.submodels || []).map(sub => {
           const [stx = 0, sty = 0, stz = 0] = sub.translate || []
-          return { ...sub, translate: [Math.round(stx - d[0]), Math.round(sty - d[1]), Math.round(stz - d[2])] }
+          return { ...sub, translate: [Math.round(stx - d[0]), Math.round(sty - d[1]), Math.round(stz - d[2])] as [number, number, number] }
         }),
       }))
     } else if (sel.kind === 'model') {
@@ -1517,7 +1517,7 @@ const ModelerBase = forwardRef<any, any>(function Modeler({
                   </div>
                 ) : selFace ? (() => {
                   const key = 'uv' + selFace[0].toUpperCase() + selFace.slice(1)
-                  const coords = selBox[key] || [0, 0, 0, 0]
+                  const coords = (selBox[key] as number[] | undefined) || [0, 0, 0, 0]
                   return (
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ ...s.label, marginBottom: 2, color: FACE_COLORS[selFace] }}>{selFace.toUpperCase()} UV</div>

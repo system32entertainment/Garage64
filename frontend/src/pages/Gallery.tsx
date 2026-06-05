@@ -1,8 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api'
 import CemViewer from '../components/CemViewer'
 import Export from '../features/Export/index'
+import {
+  useBodiesQuery,
+  useCompiledJemQuery,
+  useCreateVariantMutation,
+  useDeleteVariantMutation,
+  usePartsQuery,
+  useUpdateVariantMutation,
+  useVariantsQuery,
+} from '../queries'
 import { useTheme } from '../ThemeContext'
 
 const XP_BTN = { fontSize: '11px', padding: '3px 10px', cursor: 'pointer', background: 'var(--bg-btn)', borderTop: '1px solid var(--bdr-btn-lt)', borderLeft: '1px solid var(--bdr-btn-lt)', borderRight: '1px solid var(--bdr-btn-dk)', borderBottom: '1px solid var(--bdr-btn-dk)', color: 'var(--clr-text)', fontFamily: 'Monocraft, sans-serif', fontWeight: 'bold' }
@@ -49,34 +57,32 @@ export default function Gallery() {
   const { isDark } = useTheme()
   const bg = isDark ? '#1e1e1e' : '#ece9d8'
   const [gTab, setGTab] = useState('cars')  // 'cars' | 'export'
-  const [variants, setVariants] = useState([])
-  const [parts, setParts] = useState([])
-  const [bodies, setBodies] = useState([])
   const [selectedId, setSelectedId] = useState(null)
-  const [jem, setJem] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [viewError, setViewError] = useState('')
   const [editing, setEditing] = useState(null)   // null | 'new' | variant.id
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
+  const variantsQuery = useVariantsQuery()
+  const partsQuery = usePartsQuery()
+  const bodiesQuery = useBodiesQuery()
+  const createVariant = useCreateVariantMutation()
+  const updateVariant = useUpdateVariantMutation()
+  const deleteVariant = useDeleteVariantMutation()
+  const variants = variantsQuery.data || []
+  const parts = partsQuery.data || []
+  const bodies = bodiesQuery.data || []
+  const jemQuery = useCompiledJemQuery(selectedId)
+  const loading = jemQuery.isLoading || jemQuery.isFetching
+  const viewError = jemQuery.error instanceof Error ? jemQuery.error.message : ''
+  const jem = jemQuery.data || null
 
   useEffect(() => {
-    api.getVariants().then(vs => { setVariants(vs); if (vs.length) setSelectedId(vs[vs.length - 1].id) })
-    api.getParts().then(setParts)
-    api.getBodies().then(setBodies)
-  }, [])
+    if (!selectedId && variants.length) setSelectedId(variants[variants.length - 1].id)
+  }, [selectedId, variants])
 
-  // Load compiled JEM whenever selection changes
-  useEffect(() => {
-    if (!selectedId) return
-    setViewError(''); setLoading(true); setJem(null)
-    fetch(`${import.meta.env.BASE_URL}api/variants/${selectedId}/compiled_jem/`)
-      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
-      .then(data => { setJem(data); setLoading(false) })
-      .catch(e => { setViewError(e.message); setLoading(false) })
-  }, [selectedId])
-
-  const selectedVariant = variants.find(v => v.id === selectedId) || null
+  const selectedVariant = useMemo(
+    () => variants.find(v => v.id === selectedId) || null,
+    [selectedId, variants],
+  )
 
   // ── form helpers ──────────────────────────────────────────────────────────────
   function openNew() {
@@ -107,23 +113,22 @@ export default function Gallery() {
     setFormError('')
     try {
       if (editing === 'new') {
-        await api.createVariant({ ...form })
+        const created = await createVariant.mutateAsync({ ...form })
+        setSelectedId(created.id)
       } else {
-        await api.updateVariant(editing, { ...form })
+        await updateVariant.mutateAsync({ id: editing, data: { ...form } })
       }
       setEditing(null)
-      const fresh = await api.getVariants()
-      setVariants(fresh)
-      if (editing === 'new' && fresh.length) setSelectedId(fresh[fresh.length - 1].id)
     } catch (e) { setFormError(e.message) }
   }
 
   async function del(id) {
     if (!confirm('Delete this variant?')) return
-    await api.deleteVariant(id)
-    const fresh = await api.getVariants()
-    setVariants(fresh)
-    if (id === selectedId) setSelectedId(fresh.length ? fresh[fresh.length - 1].id : null)
+    await deleteVariant.mutateAsync(id)
+    if (id === selectedId) {
+      const remaining = variants.filter(v => v.id !== id)
+      setSelectedId(remaining.length ? remaining[remaining.length - 1].id : null)
+    }
   }
 
   // ── render ────────────────────────────────────────────────────────────────────
@@ -277,7 +282,7 @@ export default function Gallery() {
               </div>
             )}
             <div style={{ ...s.viewerWrap, position: 'relative' }}>
-              <CemViewer ref={viewerRef} jem={jem} onError={setViewError} autoRotate showGrid={false} showAxes={false} bgColor={bg} />
+              <CemViewer ref={viewerRef} jem={jem} onError={() => {}} autoRotate showGrid={false} showAxes={false} bgColor={bg} />
               {!jem && !loading && (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--clr-text-dim)', fontSize: '0.9rem', pointerEvents: 'none' }}>
                   Select a variant to preview
