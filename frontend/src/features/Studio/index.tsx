@@ -9,6 +9,8 @@ import CemViewer from '../../components/CemViewer'
 import TexToolbox from '../TextureEditing/components/TexToolbox'
 import Modeler from '../Modeler'
 import { useTheme } from '../../ThemeContext'
+import { XpButton, XpInput, XpPanel, XpSection, XpSelect, XpTitleBar } from '../../ui/components'
+import { XP_BTN, XP_BTN_ACTIVE, XP_BTN_SM, XP_ERR, XP_INPUT, XP_LABEL, XP_OK, XP_PAGE, XP_RAISED, XP_SUNKEN, XP_TITLE_BAR } from '../../ui/xp'
 
 
 // ── constants ─────────────────────────────────────────────────────────────────
@@ -17,14 +19,8 @@ const ZOOM_LEVELS = [2, 4, 6, 8, 12, 16, 24, 32]
 
 // ── styles ────────────────────────────────────────────────────────────────────
 
-const XP_RAISED = { borderTop: '2px solid var(--bdr-lt)', borderLeft: '2px solid var(--bdr-lt)', borderRight: '2px solid var(--bdr-dk)', borderBottom: '2px solid var(--bdr-dk)' }
-const XP_SUNKEN = { borderTop: '2px solid var(--bdr-dk)', borderLeft: '2px solid var(--bdr-dk)', borderRight: '2px solid var(--bdr-input-lt)', borderBottom: '2px solid var(--bdr-input-lt)' }
-const XP_TITLE = { background: 'var(--bg-title)', color: 'var(--clr-text-on-title)', padding: '2px 8px', fontSize: '11px', fontWeight: 'bold', fontFamily: 'Monocraft, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--bdr-dk)' }
-const XP_BTN_SM = { padding: '2px 8px', background: 'var(--bg-btn)', ...{ borderTop: '1px solid var(--bdr-btn-lt)', borderLeft: '1px solid var(--bdr-btn-lt)', borderRight: '1px solid var(--bdr-btn-dk)', borderBottom: '1px solid var(--bdr-btn-dk)' }, color: 'var(--clr-text)', cursor: 'pointer', fontSize: '11px', fontFamily: 'Monocraft, sans-serif', fontWeight: 'bold' }
-const XP_INPUT = { padding: '3px 6px', background: 'var(--bg-input)', color: 'var(--clr-text)', ...{ borderTop: '2px solid var(--bdr-dk)', borderLeft: '2px solid var(--bdr-dk)', borderRight: '2px solid var(--bdr-input-lt)', borderBottom: '2px solid var(--bdr-input-lt)' }, fontFamily: 'Monocraft, sans-serif', fontSize: '11px' }
-
 const s: Record<string, React.CSSProperties> = {
-  page: { display: 'flex', flexDirection: 'column', height: 'calc(100vh - 48px)', background: 'var(--bg-window)', margin: '-1.5rem -2rem', overflow: 'hidden' },
+  page: XP_PAGE,
   topBar: { display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', flexShrink: 0, borderBottom: '2px solid var(--bdr-dk)', background: 'var(--bg-panel)' },
   content: { flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' },
   sidebar: { flexShrink: 0, display: 'flex', flexDirection: 'column', background: 'var(--bg-panel)', overflow: 'hidden' },
@@ -39,21 +35,21 @@ const s: Record<string, React.CSSProperties> = {
   tabContent: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-panel)', padding: '4px', borderTop: 'none', borderLeft: '2px solid var(--bdr-dk)', borderRight: '2px solid var(--bdr-input-lt)', borderBottom: '2px solid var(--bdr-input-lt)' },
   saveBar: { flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px', padding: '6px', borderTop: '2px solid var(--bdr-dk)', background: 'var(--bg-panel)' },
   section: { background: 'var(--bg-window)', overflow: 'hidden', flexShrink: 0, ...XP_RAISED },
-  secHead: XP_TITLE,
+  secHead: XP_TITLE_BAR,
   secBody: { padding: '6px 8px' },
   select: { ...XP_INPUT, width: '100%', boxSizing: 'border-box' },
   selectSm: { ...XP_INPUT },
-  label: { color: 'var(--clr-text-dim)', fontSize: '11px', fontFamily: 'Monocraft, sans-serif' },
+  label: XP_LABEL,
   input: { ...XP_INPUT },
   inputFull: { ...XP_INPUT, width: '100%', boxSizing: 'border-box' },
-  btn: { padding: '4px 16px', background: 'var(--bg-btn-primary)', borderTop: '2px solid var(--bdr-btn-primary-lt)', borderLeft: '2px solid var(--bdr-btn-primary-lt)', borderRight: '2px solid var(--bdr-btn-primary-dk)', borderBottom: '2px solid var(--bdr-btn-primary-dk)', color: '#fff', fontFamily: 'Monocraft, sans-serif', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' },
+  btn: XP_BTN,
   btnSm: XP_BTN_SM,
   badge: { display: 'inline-block', background: 'var(--clr-badge-bg)', border: '1px solid var(--clr-badge-border)', color: 'var(--clr-badge-text)', padding: '1px 5px', fontSize: '10px', fontFamily: 'Monocraft, sans-serif', marginRight: 3 },
-  ok: { color: 'var(--clr-ok)', fontSize: '11px', fontFamily: 'Monocraft, sans-serif' },
-  err: { color: 'var(--clr-err)', fontSize: '11px', fontFamily: 'Monocraft, sans-serif' },
+  ok: XP_OK,
+  err: XP_ERR,
   // compose
   slotBox: { background: 'var(--bg-window)', overflow: 'hidden', flexShrink: 0, ...XP_RAISED },
-  slotHeader: { display: 'flex', alignItems: 'center', padding: '2px 8px', ...XP_TITLE, textTransform: 'uppercase' },
+  slotHeader: { display: 'flex', alignItems: 'center', padding: '2px 8px', ...XP_TITLE_BAR, textTransform: 'uppercase' },
   slotTitle: { flex: 1, fontSize: '11px', fontWeight: 'bold', color: 'var(--clr-text-on-title)', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'Monocraft, sans-serif' },
   slotBody: { padding: '4px 8px' },
   miniViewer: { height: '90px', position: 'relative', overflow: 'hidden', flexShrink: 0 },
@@ -80,7 +76,7 @@ const s: Record<string, React.CSSProperties> = {
   // texture
   toolRow: { display: 'flex', gap: '4px', flexWrap: 'wrap' },
   toolBtn: { ...XP_BTN_SM, padding: '4px 8px' },
-  toolAct: { background: 'var(--bg-btn-active)', borderTop: '1px solid var(--bdr-dk)', borderLeft: '1px solid var(--bdr-dk)', borderRight: '1px solid var(--bdr-input-lt)', borderBottom: '1px solid var(--bdr-input-lt)', color: 'var(--clr-text)' },
+  toolAct: XP_BTN_ACTIVE,
   colorWrap: { display: 'flex', gap: '8px', alignItems: 'center' },
   swatch: { width: '32px', height: '32px', ...XP_SUNKEN, cursor: 'pointer', flexShrink: 0 },
   hexInput: { ...XP_INPUT, flex: 1 },
@@ -88,7 +84,7 @@ const s: Record<string, React.CSSProperties> = {
   alphaSlider: { flex: 1, accentColor: 'var(--clr-accent)' },
   zoomRow: { display: 'flex', gap: '3px', flexWrap: 'wrap' },
   zoomBtn: { ...XP_BTN_SM, padding: '2px 5px', fontSize: '10px' },
-  zoomAct: { background: 'var(--bg-btn-active)', borderTop: '1px solid var(--bdr-dk)', borderLeft: '1px solid var(--bdr-dk)', borderRight: '1px solid var(--bdr-input-lt)', borderBottom: '1px solid var(--bdr-input-lt)', color: 'var(--clr-text)', fontWeight: 'bold' },
+  zoomAct: XP_BTN_ACTIVE,
   histRow: { display: 'flex', flexWrap: 'wrap', gap: '3px', marginTop: '4px' },
   histSwatch: { width: '18px', height: '18px', ...XP_SUNKEN, cursor: 'pointer', flexShrink: 0 },
   infoRow: { fontSize: '10px', color: 'var(--clr-text-dim)', marginTop: '4px', fontFamily: 'Monocraft, sans-serif' },
@@ -978,7 +974,7 @@ export default function Studio() {
       {/* Large canvas area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#1a1a1a', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', flexShrink: 0, borderBottom: '2px solid var(--bdr-dk)', background: 'var(--bg-panel)' }}>
-          <button style={s.btnSm} onClick={() => setTexEditorMode(false)}>← Back to Studio</button>
+          <XpButton onClick={() => setTexEditorMode(false)}>← Back to Studio</XpButton>
           <span style={{ ...s.label, marginLeft: '8px' }}>{texPath || '—'}</span>
           {texBuf && <span style={s.infoRow}>{texBuf.width} × {texBuf.height} px</span>}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -1012,7 +1008,7 @@ export default function Studio() {
         {/* Zoom bar */}
         <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap', padding: '4px 8px', borderTop: '1px solid var(--bdr-dk)', background: 'var(--bg-panel)', flexShrink: 0 }}>
           {ZOOM_LEVELS.map(z => (
-            <button key={z} style={{ ...s.zoomBtn, ...(zoom === z ? s.zoomAct : {}) }} onClick={() => setZoom(z)}>{z}×</button>
+            <XpButton key={z} active={zoom === z} style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => setZoom(z)}>{z}×</XpButton>
           ))}
         </div>
       </div>
@@ -1020,16 +1016,16 @@ export default function Studio() {
       {/* Right panel — save only */}
       <div style={{ width: 160, flexShrink: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-panel)', borderLeft: '2px solid var(--bdr-dk)' }}>
         <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <button style={s.btn} onClick={texSave}>Save PNG</button>
-          <button style={s.btn} onClick={texSaveAs}>Save As</button>
+          <XpButton variant="primary" onClick={texSave}>Save PNG</XpButton>
+          <XpButton variant="primary" onClick={texSaveAs}>Save As</XpButton>
           {showSaveAs && (
             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-              <input style={{ ...s.inputFull, flex: 1, fontSize: '10px' }}
+              <XpInput full style={{ flex: 1, fontSize: '10px' }}
                 value={saveAsPath} onChange={e => setSaveAsPath(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') doSaveAs(); if (e.key === 'Escape') setShowSaveAs(false) }}
                 placeholder="optifine/cem/..." autoFocus />
-              <button style={s.btnSm} onClick={doSaveAs}>OK</button>
-              <button style={s.btnSm} onClick={() => setShowSaveAs(false)}>✕</button>
+              <XpButton onClick={doSaveAs}>OK</XpButton>
+              <XpButton onClick={() => setShowSaveAs(false)}>✕</XpButton>
             </div>
           )}
         </div>
@@ -1042,7 +1038,7 @@ export default function Studio() {
 
       {/* Top bar */}
       <div style={s.topBar}>
-        <button style={s.btnSm} onClick={() => navigate('/gallery')}>← Garage</button>
+        <XpButton onClick={() => navigate('/gallery')}>← Garage</XpButton>
         <span style={{ marginLeft: 'auto' }}>
           {activeParts.length
             ? activeParts.map(p => <span key={p.id} style={s.badge}>+{p.name}</span>)
@@ -1063,14 +1059,14 @@ export default function Studio() {
             const partMini = editingPart ? partToMiniJem(editingPart) : null
             return (
               <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                <div style={{ ...XP_TITLE, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <button style={{ ...s.btnSm, fontSize: '9px', padding: '1px 6px' }}
-                    onClick={() => createPartMode ? setCreatePartMode(false) : navigate('/parts-library')}>←</button>
+                <XpTitleBar style={{ gap: '6px' }}>
+                  <XpButton style={{ fontSize: '9px', padding: '1px 6px' }}
+                    onClick={() => createPartMode ? setCreatePartMode(false) : navigate('/parts-library')}>←</XpButton>
                   <span style={{ flex: 1 }}>{createPartMode ? 'Creating New Part' : 'Editing Part'}</span>
-                </div>
+                </XpTitleBar>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
                   {editingPart ? (
-                    <div style={s.slotBox}>
+                    <XpPanel>
                       <div style={s.miniViewer}>
                         {partMini
                           ? <CemViewer key={viewerVer} jem={partMini} onError={() => { }} autoRotate sidebarOffset={0} showGrid={false} showAxes={false} fitScale={0.55} enableZoom={false} bgColor={bg} />
@@ -1082,7 +1078,7 @@ export default function Studio() {
                         <div style={{ fontSize: '9px', color: 'var(--clr-text-dim)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{editingPart.jpm_path}</div>
                         <div>
                           <div style={s.label}>Category</div>
-                          <select style={s.select} value={editingPart.slot || ''}
+                          <XpSelect full value={editingPart.slot || ''}
                             onChange={async e => {
                               const slot = e.target.value
                               await api.patchPart(editingPart.id, { slot })
@@ -1090,24 +1086,24 @@ export default function Studio() {
                             }}>
                             <option value="">Standalone (no category)</option>
                             {slots.map(sl => <option key={sl.id} value={sl.name}>{sl.display_name}</option>)}
-                          </select>
+                          </XpSelect>
                         </div>
                       </div>
-                    </div>
+                    </XpPanel>
                   ) : createPartMode ? (
                     <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div>
                         <div style={s.label}>Car Body</div>
-                        <select style={s.select} value={newPartBodyId ?? ''} onChange={e => setNewPartBodyId(Number(e.target.value))}>
+                        <XpSelect full value={newPartBodyId ?? ''} onChange={e => setNewPartBodyId(Number(e.target.value))}>
                           {bodies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                        </select>
+                        </XpSelect>
                       </div>
                       <div>
                         <div style={s.label}>Category</div>
-                        <select style={s.select} value={newPartSlot} onChange={e => setNewPartSlot(e.target.value)}>
+                        <XpSelect full value={newPartSlot} onChange={e => setNewPartSlot(e.target.value)}>
                           <option value="">Standalone (no category)</option>
                           {slots.map(sl => <option key={sl.id} value={sl.name}>{sl.display_name}</option>)}
-                        </select>
+                        </XpSelect>
                       </div>
                     </div>
                   ) : (
@@ -1116,9 +1112,9 @@ export default function Studio() {
                 </div>
                 <div style={s.saveBar}>
                   <span style={s.label}>Save as part (.jpm)</span>
-                  <input style={s.inputFull} placeholder="part_name e.g. miata_duce_wheels"
+                  <XpInput full placeholder="part_name e.g. miata_duce_wheels"
                     value={partSaveName} onChange={e => setPartSaveName(e.target.value)} />
-                  <button style={s.btn} onClick={savePartFromEditor}>Save Part</button>
+                  <XpButton variant="primary" onClick={savePartFromEditor}>Save Part</XpButton>
                   {partSaveStatus === 'ok' && <span style={s.ok}>Saved!</span>}
                   {partSaveStatus && partSaveStatus !== 'ok' && <span style={s.err}>{partSaveStatus}</span>}
                 </div>
@@ -1126,11 +1122,11 @@ export default function Studio() {
             )
           })() : (
             <>
-              <div style={{ ...XP_TITLE, display: 'flex', alignItems: 'center' }}>
+              <XpTitleBar>
                 <span style={{ flex: 1 }}>Compose</span>
                 <input type="checkbox" checked={showCompose} onChange={() => setShowCompose(v => !v)}
                   style={{ cursor: 'pointer', margin: 0, accentColor: 'var(--clr-accent)' }} />
-              </div>
+              </XpTitleBar>
 
               {showCompose && <div style={s.tabContent}>
 
@@ -1156,20 +1152,20 @@ export default function Studio() {
                         if (!newBodyName.trim()) return
                         try { const b = await api.createBody({ name: newBodyName.trim(), body_data: { models: [], texture: '', textureSize: [64, 32] } }); setBodies(bs => [...bs, b]); setBodyId(b.id); setShowNewBody(false); setNewBodyName('') } catch (err) { alert(err.message) }
                       }} onClick={e => e.stopPropagation()}>
-                        <input autoFocus style={{ ...s.input, flex: 1, fontSize: '10px' }} placeholder="body name" value={newBodyName} onChange={e => setNewBodyName(e.target.value)} />
+                        <XpInput autoFocus style={{ flex: 1, fontSize: '10px' }} placeholder="body name" value={newBodyName} onChange={e => setNewBodyName(e.target.value)} />
                         <button type="submit" style={s.editBtn}>✓</button>
                         <button type="button" style={s.editBtn} onClick={() => { setShowNewBody(false); setNewBodyName('') }}>✕</button>
                       </form>
                       : <>
-                        <select
-                          style={{ ...s.select, flex: 1, fontSize: '10px' }}
+                        <XpSelect
+                          style={{ flex: 1, fontSize: '10px' }}
                           value={bodyId ?? ''}
                           onClick={e => e.stopPropagation()}
                           onChange={e => { e.stopPropagation(); setBodyId(e.target.value ? Number(e.target.value) : null) }}
                         >
                           <option value=''>— none —</option>
                           {bodies.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                        </select>
+                        </XpSelect>
                         <div style={s.editBtns}>
                           <button style={s.editBtn} title="Create new body" onClick={e => { e.stopPropagation(); setShowNewBody(true) }}>+</button>
                           <button style={s.editBtn} title="Edit body" onClick={e => { e.stopPropagation(); setComposeSelItem({ kind: 'body' }); switchEditTab('modeler') }}>Edit</button>
@@ -1243,9 +1239,9 @@ export default function Studio() {
                 )}
 
                 <div>
-                  <button style={s.btnSm} onClick={() => setShowManage(v => !v)}>
+                  <XpButton onClick={() => setShowManage(v => !v)}>
                     {showManage ? '▲ hide' : '▼ manage slots'}
-                  </button>
+                  </XpButton>
                   {showManage && (
                     <div style={s.manageBox}>
                       <div style={s.manageTitle}>Slots</div>
@@ -1255,15 +1251,15 @@ export default function Studio() {
                             <span style={{ color: 'var(--clr-accent)', fontWeight: 'bold' }}>{sl.display_name}</span>
                             <span style={{ color: 'var(--clr-text-dim)' }}> · {sl.name}</span>
                           </span>
-                          <button style={s.btnSm} onClick={() => deleteSlot(sl.id)}>✕</button>
+                          <XpButton onClick={() => deleteSlot(sl.id)}>✕</XpButton>
                         </div>
                       ))}
                       <div style={{ marginTop: '8px', fontSize: '0.72rem', color: 'var(--clr-text-dim)', marginBottom: '4px' }}>Add slot</div>
                       <div style={s.addSlotRow}>
-                        <input style={{ ...s.input, width: '60px' }} placeholder="name" value={newSlot.name} onChange={e => setNewSlot(n => ({ ...n, name: e.target.value }))} />
-                        <input style={{ ...s.input, flex: 1 }} placeholder="Display" value={newSlot.display_name} onChange={e => setNewSlot(n => ({ ...n, display_name: e.target.value }))} />
-                        <input style={{ ...s.input, width: '30px' }} type="number" placeholder="#" value={newSlot.order} onChange={e => setNewSlot(n => ({ ...n, order: e.target.value }))} />
-                        <button style={s.btnSm} onClick={addSlot}>+</button>
+                        <XpInput style={{ width: '60px' }} placeholder="name" value={newSlot.name} onChange={e => setNewSlot(n => ({ ...n, name: e.target.value }))} />
+                        <XpInput style={{ flex: 1 }} placeholder="Display" value={newSlot.display_name} onChange={e => setNewSlot(n => ({ ...n, display_name: e.target.value }))} />
+                        <XpInput style={{ width: '30px' }} type="number" placeholder="#" value={newSlot.order} onChange={e => setNewSlot(n => ({ ...n, order: e.target.value }))} />
+                        <XpButton onClick={addSlot}>+</XpButton>
                       </div>
                       {slotStatus && <div style={s.err}>{slotStatus}</div>}
                     </div>
@@ -1272,21 +1268,20 @@ export default function Studio() {
 
               </div>}{/* tabContent / showCompose */}
 
-              {showCompose && <div style={s.saveBar}>
-                <span style={s.label}>Save as variant</span>
-                <input style={s.inputFull} placeholder="file_name e.g. oak_boat4"
+              {showCompose && <XpSection title="Save as variant" raised={false} style={s.saveBar} bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <XpInput full placeholder="file_name e.g. oak_boat4"
                   value={saveForm.file_name} onChange={e => setSaveForm(f => ({ ...f, file_name: e.target.value }))} />
-                <input style={s.inputFull} placeholder="trigger e.g. Duce"
+                <XpInput full placeholder="trigger e.g. Duce"
                   value={saveForm.trigger_name} onChange={e => setSaveForm(f => ({ ...f, trigger_name: e.target.value }))} />
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <span style={s.label}>Order</span>
-                  <input style={{ ...s.input, width: '50px' }} type="number"
+                  <XpInput style={{ width: '50px' }} type="number"
                     value={saveForm.order} onChange={e => setSaveForm(f => ({ ...f, order: Number(e.target.value) }))} />
                 </div>
-                <button style={s.btn} onClick={saveAll}>Save</button>
+                <XpButton variant="primary" onClick={saveAll}>Save</XpButton>
                 {saveStatus === 'ok' && <span style={s.ok}>Saved!</span>}
                 {saveStatus && saveStatus !== 'ok' && <span style={s.err}>{saveStatus}</span>}
-              </div>}
+              </XpSection>}
             </>)}
         </div>{/* left panel */}
 
@@ -1301,32 +1296,32 @@ export default function Studio() {
             {editTab === 'modeler' ? <>
               {/* Block Editor toolbar */}
               {[['translate', '⤢', 'Move (W)'], ['rotate', '↻', 'Rotate (E)'], ['pivot', '⊙', 'Move Pivot']].map(([id, icon, label]) => (
-                <button key={id} title={label}
-                  style={{ ...s.btnSm, ...(modelerBar.tcMode === id ? { background: 'var(--bg-btn-active)', borderTopColor: 'var(--bdr-dk)', borderLeftColor: 'var(--bdr-dk)', borderRightColor: 'var(--bdr-input-lt)', borderBottomColor: 'var(--bdr-input-lt)' } : {}) }}
-                  onClick={() => modelerRef.current?.setTcMode(id)}>{icon}</button>
+                <XpButton key={id} title={label}
+                  active={modelerBar.tcMode === id}
+                  onClick={() => modelerRef.current?.setTcMode(id)}>{icon}</XpButton>
               ))}
               <div style={{ width: '1px', height: '18px', background: 'var(--bdr-dk)', margin: '0 2px' }} />
-              <button title="Undo (Ctrl+Z)" style={{ ...s.btnSm, opacity: modelerBar.undoCount ? 1 : 0.4 }} onClick={() => modelerRef.current?.undo()} disabled={!modelerBar.undoCount}>↩</button>
-              <button title="Redo (Ctrl+Shift+Z)" style={{ ...s.btnSm, opacity: modelerBar.redoCount ? 1 : 0.4 }} onClick={() => modelerRef.current?.redo()} disabled={!modelerBar.redoCount}>↪</button>
+              <XpButton title="Undo (Ctrl+Z)" style={{ opacity: modelerBar.undoCount ? 1 : 0.4 }} onClick={() => modelerRef.current?.undo()} disabled={!modelerBar.undoCount}>↩</XpButton>
+              <XpButton title="Redo (Ctrl+Shift+Z)" style={{ opacity: modelerBar.redoCount ? 1 : 0.4 }} onClick={() => modelerRef.current?.redo()} disabled={!modelerBar.redoCount}>↪</XpButton>
               <div style={{ width: '1px', height: '18px', background: 'var(--bdr-dk)', margin: '0 2px' }} />
-              <button title="Add Cube" style={s.btnSm} onClick={() => modelerRef.current?.addCube()}>+ Cube</button>
-              <button title="Delete Selected (Del)" style={{ ...s.btnSm, opacity: modelerBar.hasSel ? 1 : 0.4 }} onClick={() => modelerRef.current?.deleteSelected()} disabled={!modelerBar.hasSel}>✕ Delete</button>
+              <XpButton title="Add Cube" onClick={() => modelerRef.current?.addCube()}>+ Cube</XpButton>
+              <XpButton title="Delete Selected (Del)" style={{ opacity: modelerBar.hasSel ? 1 : 0.4 }} onClick={() => modelerRef.current?.deleteSelected()} disabled={!modelerBar.hasSel}>✕ Delete</XpButton>
             </> : <>
               {/* Texture toolbar */}
               {[['drag', '✥'], ['pencil', '✏'], ['fill', '▦'], ['eraser', '◻'], ['eye', '⊕']].map(([id, icon]) => (
-                <button key={id} title={id} style={{ ...s.btnSm, ...(tool === id ? { background: 'var(--bg-btn-active)', borderTopColor: 'var(--bdr-dk)', borderLeftColor: 'var(--bdr-dk)', borderRightColor: 'var(--bdr-input-lt)', borderBottomColor: 'var(--bdr-input-lt)' } : {}) }}
-                  onClick={() => setTool(id)}>{icon}</button>
+                <XpButton key={id} title={id} active={tool === id}
+                  onClick={() => setTool(id)}>{icon}</XpButton>
               ))}
               <div style={{ width: '1px', height: '18px', background: 'var(--bdr-dk)', margin: '0 2px' }} />
-              <button title="Undo" style={{ ...s.btnSm, opacity: undoCount ? 1 : 0.4 }} onClick={texUndo} disabled={!undoCount}>↩</button>
-              <button title="Redo" style={{ ...s.btnSm, opacity: redoCount ? 1 : 0.4 }} onClick={texRedo} disabled={!redoCount}>↪</button>
+              <XpButton title="Undo" style={{ opacity: undoCount ? 1 : 0.4 }} onClick={texUndo} disabled={!undoCount}>↩</XpButton>
+              <XpButton title="Redo" style={{ opacity: redoCount ? 1 : 0.4 }} onClick={texRedo} disabled={!redoCount}>↪</XpButton>
               <div style={{ width: '1px', height: '18px', background: 'var(--bdr-dk)', margin: '0 2px' }} />
               <div title="Color" style={{ width: '22px', height: '22px', background: `rgba(${(hexInput || '#000000').replace('#', '').match(/../g).map(h => parseInt(h, 16)).join(',')},${(alpha / 255).toFixed(2)})`, border: '2px solid var(--bdr-dk)', cursor: 'pointer', flexShrink: 0 }}
                 onClick={() => document.getElementById('_tbCenterPicker').click()} />
               <input id="_tbCenterPicker" type="color" value={color}
                 style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
                 onChange={e => { setColor(e.target.value); setHexInput(e.target.value) }} />
-              <input style={{ ...s.input, width: '72px', fontSize: '10px' }} value={hexInput} maxLength={7}
+              <XpInput style={{ width: '72px', fontSize: '10px' }} value={hexInput} maxLength={7}
                 onChange={e => onHexChange(e.target.value)} placeholder="#rrggbb" />
               <input type="range" min={0} max={255} value={alpha} onChange={e => setAlpha(Number(e.target.value))}
                 style={{ width: '60px', accentColor: 'var(--clr-accent)' }} title={`Alpha: ${alpha}`} />
@@ -1342,9 +1337,9 @@ export default function Studio() {
               : <div style={{ color: 'var(--clr-text-dim)', padding: '2rem', fontSize: '0.9rem' }}>Select a body to preview.</div>}
             {/* Grid toggle */}
             <div style={{ position: 'absolute', top: '10px', left: '10px' }}>
-              <button
-                style={{ ...s.btnSm, ...(showGrid ? { background: 'var(--bg-btn-active)', borderTop: '1px solid var(--bdr-dk)', borderLeft: '1px solid var(--bdr-dk)', borderRight: '1px solid var(--bdr-input-lt)', borderBottom: '1px solid var(--bdr-input-lt)' } : {}) }}
-                onClick={() => setShowGrid(g => !g)}>⊞ Grid</button>
+              <XpButton
+                active={showGrid}
+                onClick={() => setShowGrid(g => !g)}>⊞ Grid</XpButton>
             </div>
           </div>{/* inner flex viewer */}
         </div>{/* centerPanel */}
@@ -1382,15 +1377,15 @@ export default function Studio() {
               {/* Target selector */}
               <div style={{ padding: '4px 6px', display: 'flex', gap: '4px', alignItems: 'center', borderBottom: '1px solid var(--bdr-dk)', flexShrink: 0 }}>
                 {editTab === 'texture' ? (
-                  <select style={{ ...s.select, flex: 1 }} value={texTargetId} onChange={e => setTexTargetId(e.target.value)}>
+                  <XpSelect style={{ flex: 1 }} value={texTargetId} onChange={e => setTexTargetId(e.target.value)}>
                     <option value="">Body: {currentBody?.name ?? '—'}</option>
                     {activeParts.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                  </select>
+                  </XpSelect>
                 ) : (
-                  <select style={{ ...s.select, flex: 1 }} value={uvPartId ?? ''} onChange={e => { const id = e.target.value ? Number(e.target.value) : null; setUvPartId(id) }}>
+                  <XpSelect style={{ flex: 1 }} value={uvPartId ?? ''} onChange={e => { const id = e.target.value ? Number(e.target.value) : null; setUvPartId(id) }}>
                     <option value="">Body: {currentBody?.name ?? '—'}</option>
                     {activeParts.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                  </XpSelect>
                 )}
               </div>
 
@@ -1398,27 +1393,27 @@ export default function Studio() {
               {createPartMode && <div style={{ padding: '4px 6px 6px', borderBottom: '1px solid var(--bdr-dk)', flexShrink: 0 }}>
                 <div style={{ fontSize: '10px', color: 'var(--clr-text-dim)', marginBottom: '4px', fontFamily: 'Monocraft, sans-serif' }}>Texture Size</div>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <input type="number" style={{ ...s.input, width: '44px' }} value={newTexSize[0]}
+                  <XpInput type="number" style={{ width: '44px' }} value={newTexSize[0]}
                     onChange={e => setNewTexSize(v => [Number(e.target.value) || v[0], v[1]])} min={1} max={512} />
                   <span style={{ fontSize: '10px', color: 'var(--clr-text-dim)' }}>×</span>
-                  <input type="number" style={{ ...s.input, width: '44px' }} value={newTexSize[1]}
+                  <XpInput type="number" style={{ width: '44px' }} value={newTexSize[1]}
                     onChange={e => setNewTexSize(v => [v[0], Number(e.target.value) || v[1]])} min={1} max={512} />
-                  <button style={s.btnSm} onClick={() => { bufRef.current = null; initNewPartTexture(newTexSize[0], newTexSize[1]) }}>New</button>
+                  <XpButton onClick={() => { bufRef.current = null; initNewPartTexture(newTexSize[0], newTexSize[1]) }}>New</XpButton>
                 </div>
               </div>}
 
               {/* ── TEXTURE PAINTER ── */}
-              <div style={{ ...XP_TITLE, flexShrink: 0 }}>Texture Painter{texDirty ? ' *' : ''}</div>
+              <XpTitleBar style={{ flexShrink: 0 }}>Texture Painter{texDirty ? ' *' : ''}</XpTitleBar>
               <div style={{ padding: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
 
                 {/* Fullscreen button */}
                 <div style={{ display: 'flex', padding: '2px 4px' }}>
-                  <button style={{ ...s.btnSm, marginLeft: 'auto' }} onClick={() => setTexEditorMode(true)}>⛶ Full Editor</button>
+                  <XpButton style={{ marginLeft: 'auto' }} onClick={() => setTexEditorMode(true)}>⛶ Full Editor</XpButton>
                 </div>
 
                 {/* Texture path + dimensions */}
                 <div style={{ padding: '0 4px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <input style={{ ...s.inputFull, fontSize: '10px' }}
+                  <XpInput full style={{ fontSize: '10px' }}
                     value={texPath} onChange={e => setTexPath(e.target.value)}
                     placeholder="textures/entity/..." />
                   {texBuf && <div style={s.infoRow}>{texBuf.width} × {texBuf.height} px</div>}
@@ -1436,25 +1431,25 @@ export default function Studio() {
                 {/* Zoom */}
                 <div style={{ ...s.zoomRow, padding: '0 4px' }}>
                   {ZOOM_LEVELS.map(z => (
-                    <button key={z} style={{ ...s.zoomBtn, ...(zoom === z ? s.zoomAct : {}) }} onClick={() => setZoom(z)}>{z}×</button>
+                    <XpButton key={z} active={zoom === z} style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => setZoom(z)}>{z}×</XpButton>
                   ))}
                   {hoverPixel && texBuf && <span style={{ marginLeft: 'auto', fontSize: '10px', color: 'var(--clr-text-dim)', fontFamily: 'Monocraft, sans-serif' }}>({hoverPixel[0]},{hoverPixel[1]})</span>}
                 </div>
 
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap', padding: '0 4px 8px' }}>
-                  <button style={s.btn} onClick={texSave}>Save PNG</button>
-                  <button style={s.btn} onClick={texSaveAs}>Save As</button>
+                  <XpButton variant="primary" onClick={texSave}>Save PNG</XpButton>
+                  <XpButton variant="primary" onClick={texSaveAs}>Save As</XpButton>
                   {texStatus === 'ok' && <span style={s.ok}>Saved!</span>}
                   {texStatus && texStatus !== 'ok' && <span style={s.err}>{texStatus}</span>}
                 </div>
                 {showSaveAs && (
                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center', padding: '0 4px 8px' }}>
-                    <input style={{ ...s.inputFull, flex: 1, fontSize: '10px' }}
+                    <XpInput full style={{ flex: 1, fontSize: '10px' }}
                       value={saveAsPath} onChange={e => setSaveAsPath(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter') doSaveAs(); if (e.key === 'Escape') setShowSaveAs(false) }}
                       placeholder="optifine/cem/..." autoFocus />
-                    <button style={s.btnSm} onClick={doSaveAs}>OK</button>
-                    <button style={s.btnSm} onClick={() => setShowSaveAs(false)}>✕</button>
+                    <XpButton onClick={doSaveAs}>OK</XpButton>
+                    <XpButton onClick={() => setShowSaveAs(false)}>✕</XpButton>
                   </div>
                 )}
               </div>
